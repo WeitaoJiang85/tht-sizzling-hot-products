@@ -1,5 +1,13 @@
 .idea
 
+# Local IDE/cache artifacts
+*.lscache
+
+# Local logs
+logs/
+**/logs/
+*.log
+
 # Local documentation archive
 docs/
 
