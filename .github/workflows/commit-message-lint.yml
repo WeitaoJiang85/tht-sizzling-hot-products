@@ -1,0 +1,59 @@
+name: Commit Message Lint
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  validate-commit-messages:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages in PR
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          echo "Validating commit messages from ${BASE_SHA}..${HEAD_SHA}"
+
+          # Conventional Commit style with capitalized subject:
+          # type(scope)!: Subject
+          # - type: feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert
+          # - scope and ! are optional
+          # - Subject must start with A-Z
+          pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?(!)?: [A-Z].+'
+
+          invalid=0
+
+          while IFS=$'\t' read -r sha subject; do
+            # Skip merge commits created by sync operations.
+            if [[ "$subject" =~ ^Merge\  ]]; then
+              continue
+            fi
+
+            if [[ ! "$subject" =~ $pattern ]]; then
+              echo "Invalid commit message: ${subject} (${sha})"
+              invalid=1
+            fi
+          done < <(git log --format='%H%x09%s' "${BASE_SHA}..${HEAD_SHA}")
+
+          if [[ "$invalid" -ne 0 ]]; then
+            echo
+            echo "Commit message validation failed."
+            echo "Expected format: type(scope)!: Subject"
+            echo "Examples:"
+            echo "  feat: Add product ranking endpoint"
+            echo "  fix(api): Handle null image URL"
+            echo "  chore!: Drop deprecated DTO"
+            exit 1
+          fi
+
+          echo "All commit messages are valid."
