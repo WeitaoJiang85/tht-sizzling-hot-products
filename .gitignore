@@ -1,0 +1,10 @@
+.idea
+
+# Local documentation archive
+docs/
+
+# Removed scaffold/sample paths
+frontend/src/
+backend/src/
+backend/tests/
+frontend/IMPORTS.ts

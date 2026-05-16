@@ -1,0 +1,35 @@
+# Build output
+bin/
+obj/
+out/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vs/
+.vscode/
+
+# Test output
+TestResults/
+*.trx
+
+# NuGet
+*.nupkg
+*.snupkg
+artifacts/
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Secrets
+appsettings.Local.json
+appsettings.*.local.json
