@@ -10,7 +10,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ ./
-COPY frontend/.env.local .env.local
+RUN if [ -f frontend/.env.local ]; then cp frontend/.env.local .env.local; else cp frontend/.env.local.example .env.local; fi
 RUN rm -rf .next
 RUN mkdir -p public
 
