@@ -1,6 +1,7 @@
 param(
     [int]$FrontendPort = 3000,
-    [int]$BackendPort = 5099
+    [int]$BackendPort = 5000,
+    [switch]$FrontendOnly
 )
 
 $ErrorActionPreference = 'Stop'
@@ -13,8 +14,8 @@ function Stop-PortProcess {
     param([int]$Port)
 
     $connections = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue |
-        Where-Object { $_.State -eq 'Listen' -and $_.OwningProcess -gt 0 } |
-        Select-Object -ExpandProperty OwningProcess -Unique
+    Where-Object { $_.State -eq 'Listen' -and $_.OwningProcess -gt 0 } |
+    Select-Object -ExpandProperty OwningProcess -Unique
 
     foreach ($procId in $connections) {
         try {
@@ -29,14 +30,20 @@ function Stop-PortProcess {
 
 Write-Host 'Preparing development environment...'
 Stop-PortProcess -Port $FrontendPort
-Stop-PortProcess -Port $BackendPort
 
-Write-Host 'Starting backend with hot reload (dotnet watch run)...'
-Start-Process powershell -ArgumentList @(
-    '-NoExit',
-    '-Command',
-    "dotnet watch --project `"$backendProject`" run"
-) | Out-Null
+if (-not $FrontendOnly) {
+    Stop-PortProcess -Port $BackendPort
+
+    Write-Host 'Starting backend with hot reload (dotnet watch run)...'
+    Start-Process powershell -ArgumentList @(
+        '-NoExit',
+        '-Command',
+        "dotnet watch --project `"$backendProject`" run"
+    ) | Out-Null
+}
+else {
+    Write-Host "Skipping backend startup and keeping existing service on http://localhost:$BackendPort"
+}
 
 Write-Host 'Starting frontend with hot reload (next dev)...'
 Start-Process powershell -ArgumentList @(

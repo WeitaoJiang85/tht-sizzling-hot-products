@@ -49,7 +49,7 @@ const ProductChip: React.FC<{ product: Product; fallbackImageUrl: string }> = ({
 export const DailyProductsTable: React.FC<DailyProductsTableProps> = ({
     products = [],
     isLoading = false,
-    fallbackImageUrl = '/branding/logo.png',
+    fallbackImageUrl = '/branding/bunnings-logo.jpg',
 }) => {
     if (isLoading && products.length === 0) {
         return (

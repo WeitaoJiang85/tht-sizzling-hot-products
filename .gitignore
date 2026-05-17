@@ -8,6 +8,10 @@ logs/
 **/logs/
 *.log
 
+# Test outputs
+**/TestResults/
+backend/SizzlingHotProducts.Tests/TestResults/
+
 # Local documentation archive
 docs/
 

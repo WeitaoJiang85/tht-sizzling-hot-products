@@ -20,11 +20,12 @@ interface QueryParams {
     singleDate: string;
 }
 
-const BRAND_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5099';
-const BRAND_LOGO_URL = `${BRAND_BASE_URL}/branding/bunnings-logo.jpg`;
-const PRODUCT_LOGO_URL = `${BRAND_BASE_URL}/branding/logo.png`;
-const FIRE_ICON_URL = `${BRAND_BASE_URL}/branding/fire.svg`;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
+const BRAND_LOGO_URL = '/branding/bunnings-logo.jpg';
+const PRODUCT_LOGO_URL = '/branding/bunnings-logo.jpg';
+const FIRE_ICON_URL = '/branding/fire.svg';
 const DEFAULT_SINGLE_DATE = '2026-04-23';
+const DASHBOARD_DATE_STORAGE_KEY = 'tht-dashboard-single-date';
 
 const toAbsoluteImageUrl = (imageUrl?: string): string | undefined => {
     if (!imageUrl) {
@@ -36,10 +37,10 @@ const toAbsoluteImageUrl = (imageUrl?: string): string | undefined => {
     }
 
     if (imageUrl.startsWith('/')) {
-        return `${BRAND_BASE_URL}${imageUrl}`;
+        return `${API_BASE_URL}${imageUrl}`;
     }
 
-    return `${BRAND_BASE_URL}/${imageUrl}`;
+    return `${API_BASE_URL}/${imageUrl}`;
 };
 
 
@@ -59,6 +60,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const [submittedQuery, setSubmittedQuery] = useState<QueryParams>({
         singleDate: DEFAULT_SINGLE_DATE,
     });
+
+    useEffect(() => {
+        try {
+            const savedDate = window.localStorage.getItem(DASHBOARD_DATE_STORAGE_KEY);
+            if (savedDate) {
+                setSingleDate(savedDate);
+                setSubmittedQuery({ singleDate: savedDate });
+            }
+        } catch {
+            // localStorage may be unavailable in restricted browser contexts.
+        }
+    }, []);
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(DASHBOARD_DATE_STORAGE_KEY, submittedQuery.singleDate);
+        } catch {
+            // Best-effort persistence only.
+        }
+    }, [submittedQuery.singleDate]);
 
     // Height values must match CSS
     const EXPANDED_HEIGHT = 205;
@@ -152,14 +173,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const dataRangeQuery = useQuery({
         queryKey: ['data-range'],
         queryFn: () => apiService.getDataRange(),
-        staleTime: 0,
+        staleTime: 1000 * 60 * 30, // 30 minutes
+        gcTime: 1000 * 60 * 60, // 1 hour
         refetchOnWindowFocus: false,
     });
 
     const latestWindowTopQuery = useQuery({
         queryKey: ['latest-window-top', 3],
         queryFn: () => apiService.getTopProductLatestWindow(3),
-        staleTime: 0,
+        staleTime: 1000 * 60 * 2, // 2 minutes
+        gcTime: 1000 * 60 * 15, // 15 minutes
         refetchOnWindowFocus: false,
     });
 
@@ -176,7 +199,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             const dayData = await apiService.getDailyTopProducts(queryDate);
             return dayData[0] ?? null;
         },
-        staleTime: 0,
+        staleTime: 1000 * 60 * 2, // 2 minutes
+        gcTime: 1000 * 60 * 15, // 15 minutes
         refetchOnWindowFocus: false,
     });
 
@@ -185,7 +209,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         queryFn: async () => {
             return apiService.getProducts();
         },
-        staleTime: 0,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        gcTime: 1000 * 60 * 30, // 30 minutes
         refetchOnWindowFocus: false,
     });
 
