@@ -126,14 +126,29 @@ $lawSharedKey = az monitor log-analytics workspace get-shared-keys `
 Assert-LastExitCode -Step "Get Log Analytics Workspace shared key"
 
 Write-Host "Creating or validating Container Apps environment..."
-az containerapp env create `
+$existingEnv = az containerapp env show `
     --name $ContainerAppsEnvName `
     --resource-group $ResourceGroup `
-    --location $Location `
-    --logs-destination log-analytics `
-    --logs-workspace-id $lawCustomerId `
-    --logs-workspace-key $lawSharedKey | Out-Null
-Assert-LastExitCode -Step "Create or validate Container Apps environment"
+    --query id --output tsv 2>$null
+if ([string]::IsNullOrWhiteSpace($existingEnv)) {
+    az containerapp env create `
+        --name $ContainerAppsEnvName `
+        --resource-group $ResourceGroup `
+        --location $Location `
+        --logs-destination log-analytics `
+        --logs-workspace-id $lawCustomerId `
+        --logs-workspace-key $lawSharedKey | Out-Null
+    Assert-LastExitCode -Step "Create Container Apps environment"
+}
+else {
+    az containerapp env update `
+        --name $ContainerAppsEnvName `
+        --resource-group $ResourceGroup `
+        --logs-destination log-analytics `
+        --logs-workspace-id $lawCustomerId `
+        --logs-workspace-key $lawSharedKey | Out-Null
+    Assert-LastExitCode -Step "Update Container Apps environment"
+}
 
 Write-Host "Creating backend Container App with external ingress..."
 az containerapp create `
@@ -199,9 +214,13 @@ Write-Host "Updating backend CORS with resolved frontend URL..."
 az containerapp update `
     --name $BackendAppName `
     --resource-group $ResourceGroup `
-    --set-env-vars `
-    "Cors__AllowedOrigins__0=https://$frontendFqdn" | Out-Null
-Assert-LastExitCode -Step "Update backend CORS allowed origin with frontend FQDN"
+    --replace-env-vars `
+    "Cors__AllowedOrigins__0=http://localhost:3000" `
+    "Cors__AllowedOrigins__1=https://localhost:3000" `
+    "Cors__AllowedOrigins__2=http://localhost:3001" `
+    "Cors__AllowedOrigins__3=https://localhost:3001" `
+    "Cors__AllowedOrigins__4=https://$frontendFqdn" | Out-Null
+Assert-LastExitCode -Step "Update backend CORS allowed origins"
 
 Write-Host "Bootstrap completed successfully."
 Write-Host ""
