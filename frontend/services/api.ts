@@ -39,7 +39,7 @@ export interface ApiError extends AxiosError {
  * Create and configure axios instance for API communication
  */
 const createApiClient = (): AxiosInstance => {
-    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5099';
+    const baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
     const timeout = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000', 10);
 
     const client = axios.create({

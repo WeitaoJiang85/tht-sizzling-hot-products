@@ -19,7 +19,7 @@ export const TopProductCard: React.FC<TopProductCardProps> = ({
     quantity = 0,
     subtitle = 'Top Product',
     productImageUrl,
-    fallbackImageUrl = '/branding/logo.png',
+    fallbackImageUrl = '/branding/bunnings-logo.jpg',
     flameIconUrl = '/branding/fire.svg',
     layout = 'vertical',
     priority = false,

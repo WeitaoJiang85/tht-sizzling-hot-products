@@ -15,6 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="10.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="xunit" Version="2.9.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
@@ -28,8 +32,12 @@
 
   <ItemGroup>
     <Compile Include="GlobalUsings.cs" />
-    <Compile Include="Services\**\*.cs"
-             Exclude="bin\**\*;obj\**\*" />
+    <Compile Include="Services\**\*.cs" Exclude="bin\**\*;obj\**\*" />
+    <Compile Include="Controllers\**\*.cs" Exclude="bin\**\*;obj\**\*" />
+    <Compile Include="DTOs\**\*.cs" Exclude="bin\**\*;obj\**\*" />
+    <Compile Include="Middleware\**\*.cs" Exclude="bin\**\*;obj\**\*" />
+    <Compile Include="Models\**\*.cs" Exclude="bin\**\*;obj\**\*" />
+    <Compile Include="Repositories\**\*.cs" Exclude="bin\**\*;obj\**\*" />
   </ItemGroup>
 
 </Project>

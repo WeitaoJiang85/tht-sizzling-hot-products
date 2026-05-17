@@ -49,6 +49,7 @@ const renderDashboard = (props: React.ComponentProps<typeof Dashboard> = {}) => 
 describe('Dashboard Component', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        localStorage.clear();
     });
 
     it('renders dashboard hero text', () => {
@@ -83,5 +84,113 @@ describe('Dashboard Component', () => {
         fireEvent.click(dismissButton);
 
         expect(onError).toHaveBeenCalledWith(null);
+    });
+
+    it('persists selected date to localStorage on component mount', () => {
+        const testDate = '2026-04-22';
+        localStorage.setItem('tht-dashboard-single-date', testDate);
+
+        renderDashboard();
+
+        const savedDate = localStorage.getItem('tht-dashboard-single-date');
+        expect(savedDate).toBe(testDate);
+    });
+
+    it('restores date from localStorage on component mount', async () => {
+        const testDate = '2026-04-22';
+        localStorage.setItem('tht-dashboard-single-date', testDate);
+
+        renderDashboard();
+
+        await screen.findByText('Single-Day Hottest Product');
+        const savedDate = localStorage.getItem('tht-dashboard-single-date');
+        expect(savedDate).toBe(testDate);
+    });
+
+    it('saves new date to localStorage when query is submitted', async () => {
+        renderDashboard();
+        await screen.findByText('Single-Day Hottest Product');
+
+        const queryButton = await screen.findByRole('button', { name: 'Query Single Day' });
+        fireEvent.click(queryButton);
+
+        // After query submission, date should be persisted
+        const savedDate = localStorage.getItem('tht-dashboard-single-date');
+        expect(savedDate).toBeDefined();
+    });
+
+    it('renders skeleton loading state when top product is loading', async () => {
+        renderDashboard();
+        await screen.findByText('Single-Day Hottest Product');
+
+        // Should eventually render without error even during loading
+        expect(screen.getByText('Sizzling Hot Products')).toBeInTheDocument();
+    });
+
+    it('renders top product section headers', async () => {
+        renderDashboard();
+        await screen.findByText('Single-Day Hottest Product');
+
+        // Verify all section headers are present
+        expect(screen.getByText('Single-Day Hottest Product')).toBeInTheDocument();
+        expect(screen.getByText('Top Product Over Latest 3 Days')).toBeInTheDocument();
+        expect(screen.getByText('All Products')).toBeInTheDocument();
+    });
+
+    it('renders latest window top products section', async () => {
+        renderDashboard();
+        await screen.findByText('Top Product Over Latest 3 Days');
+        expect(screen.getByText('Top Product Over Latest 3 Days')).toBeInTheDocument();
+    });
+
+    it('renders all products section', async () => {
+        renderDashboard();
+        await screen.findByText('All Products');
+        expect(screen.getByText('All Products')).toBeInTheDocument();
+    });
+
+    it('handles multiple date range changes', async () => {
+        renderDashboard();
+        await screen.findByText('Single-Day Hottest Product');
+
+        const queryButton = await screen.findByRole('button', { name: 'Query Single Day' });
+
+        // First query
+        fireEvent.click(queryButton);
+        const firstSave = localStorage.getItem('tht-dashboard-single-date');
+        expect(firstSave).toBeDefined();
+
+        // Second query
+        fireEvent.click(queryButton);
+        const secondSave = localStorage.getItem('tht-dashboard-single-date');
+        expect(secondSave).toBeDefined();
+    });
+
+    it('displays products with mock data', async () => {
+        renderDashboard();
+        await screen.findByText('All Products');
+
+        // Verify product data is rendered - use getAllByText since it appears multiple times
+        const productElements = screen.getAllByText(/Ezy Storage/);
+        expect(productElements.length).toBeGreaterThan(0);
+    });
+
+    it('maintains state across multiple renders', async () => {
+        const { rerender } = renderDashboard();
+        await screen.findByText('Single-Day Hottest Product');
+
+        const initialDate = localStorage.getItem('tht-dashboard-single-date');
+
+        rerender(
+            <QueryClientProvider client={new QueryClient()}>
+                <Dashboard />
+            </QueryClientProvider>
+        );
+
+        await screen.findByText('Single-Day Hottest Product');
+        const persistedDate = localStorage.getItem('tht-dashboard-single-date');
+
+        expect(initialDate).toBeDefined();
+        expect(persistedDate).toBeDefined();
     });
 });

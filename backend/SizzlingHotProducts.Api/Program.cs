@@ -1,7 +1,9 @@
 using Serilog;
+using SizzlingHotProducts.Api.Configuration;
 using SizzlingHotProducts.Api;
 using SizzlingHotProducts.Api.Repositories;
 using SizzlingHotProducts.Api.Services;
+using SizzlingHotProducts.Api.Services.Policies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,6 +50,9 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.Configure<SalesAggregationOptions>(
+    builder.Configuration.GetSection(SalesAggregationOptions.SectionName));
+builder.Services.AddSingleton<ISalesAggregationPolicyFactory, SalesAggregationPolicyFactory>();
 builder.Services.AddScoped<IProductService, ProductService>();
 
 var app = builder.Build();

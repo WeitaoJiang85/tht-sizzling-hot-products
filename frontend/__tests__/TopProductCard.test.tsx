@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TopProductCard } from '@/components/TopProductCard';
 
-const fallbackImageUrl = 'http://localhost:5099/branding/logo.png';
-const flameIconUrl = 'http://localhost:5099/branding/fire.svg';
+const fallbackImageUrl = 'http://localhost:5000/branding/logo.png';
+const flameIconUrl = 'http://localhost:5000/branding/fire.svg';
 
 describe('TopProductCard Component', () => {
     it('renders product card with default props', () => {

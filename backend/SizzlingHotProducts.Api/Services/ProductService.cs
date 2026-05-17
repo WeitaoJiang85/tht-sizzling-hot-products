@@ -1,7 +1,10 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using SizzlingHotProducts.Api.Configuration;
 using SizzlingHotProducts.Api.DTOs;
 using SizzlingHotProducts.Api.Models;
 using SizzlingHotProducts.Api.Repositories;
+using SizzlingHotProducts.Api.Services.Policies;
 
 namespace SizzlingHotProducts.Api.Services
 {
@@ -12,14 +15,33 @@ namespace SizzlingHotProducts.Api.Services
     {
         private readonly IProductRepository _repository;
         private readonly ILogger<ProductService> _logger;
+        private readonly SalesAggregationOptions _aggregationOptions;
+        private readonly ISalesAggregationPolicyFactory _policyFactory;
 
         private readonly string _brandingBaseUrl = "/branding/";
 
         public ProductService(IProductRepository repository, ILogger<ProductService> logger)
+            : this(
+                repository,
+                logger,
+                Options.Create(new SalesAggregationOptions()),
+                new SalesAggregationPolicyFactory())
+        {
+        }
+
+        public ProductService(
+            IProductRepository repository,
+            ILogger<ProductService> logger,
+            IOptions<SalesAggregationOptions> aggregationOptions,
+            ISalesAggregationPolicyFactory policyFactory)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _aggregationOptions = aggregationOptions?.Value ?? new SalesAggregationOptions();
+            _policyFactory = policyFactory ?? throw new ArgumentNullException(nameof(policyFactory));
         }
+
+        private ISalesAggregationPolicy ResolvePolicy() => _policyFactory.Create(_aggregationOptions);
 
         /// <summary>
         /// Gets the top product for a specific date.
@@ -83,15 +105,13 @@ namespace SizzlingHotProducts.Api.Services
                         .ToList();
                 }
 
-                var retailSales = completedOrders
-                    .SelectMany(order => order.Entries)
-                    .Where(entry => productDict.ContainsKey(entry.Id))
-                    .GroupBy(entry => entry.Id)
-                    .Select(group => new
-                    {
-                        ProductId = group.Key,
-                        QuantitySold = group.Sum(x => x.Quantity)
-                    })
+                var retailSales = ResolvePolicy()
+                    .Aggregate(
+                        completedOrders,
+                        productDict,
+                        targetDate,
+                        targetDate,
+                        _aggregationOptions.AccumulateSameCustomer)
                     .ToList();
 
                 if (!retailSales.Any())
@@ -101,8 +121,6 @@ namespace SizzlingHotProducts.Api.Services
                 }
 
                 var topProduct = retailSales
-                    .OrderByDescending(s => s.QuantitySold)
-                    .ThenBy(s => productDict[s.ProductId].Name)
                     .FirstOrDefault();
 
                 if (topProduct is null || string.IsNullOrWhiteSpace(topProduct.ProductId))
@@ -114,7 +132,7 @@ namespace SizzlingHotProducts.Api.Services
                 {
                     Date = targetDate,
                     ProductId = topProduct.ProductId,
-                    ProductName = productDict[topProduct.ProductId].Name,
+                    ProductName = topProduct.ProductName,
                     QuantitySold = topProduct.QuantitySold,
                     ImageUrl = GetImageUrlForProduct(productDict[topProduct.ProductId])
                 };
@@ -163,15 +181,13 @@ namespace SizzlingHotProducts.Api.Services
                     return null;
                 }
 
-                var retailSales = completedOrders
-                    .SelectMany(order => order.Entries)
-                    .Where(entry => productDict.ContainsKey(entry.Id))
-                    .GroupBy(entry => entry.Id)
-                    .Select(group => new
-                    {
-                        ProductId = group.Key,
-                        QuantitySold = group.Sum(x => x.Quantity)
-                    })
+                var retailSales = ResolvePolicy()
+                    .Aggregate(
+                        completedOrders,
+                        productDict,
+                        startDateNormalized,
+                        endDateNormalized,
+                        _aggregationOptions.AccumulateSameCustomer)
                     .ToList();
 
                 if (!retailSales.Any())
@@ -180,8 +196,6 @@ namespace SizzlingHotProducts.Api.Services
                 }
 
                 var topProduct = retailSales
-                    .OrderByDescending(s => s.QuantitySold)
-                    .ThenBy(s => productDict[s.ProductId].Name)
                     .FirstOrDefault();
 
                 if (topProduct is null || string.IsNullOrWhiteSpace(topProduct.ProductId))
@@ -193,7 +207,7 @@ namespace SizzlingHotProducts.Api.Services
                 {
                     Date = startDateNormalized,
                     ProductId = topProduct.ProductId,
-                    ProductName = productDict[topProduct.ProductId].Name,
+                    ProductName = topProduct.ProductName,
                     QuantitySold = topProduct.QuantitySold,
                     ImageUrl = GetImageUrlForProduct(productDict[topProduct.ProductId])
                 };
@@ -234,19 +248,20 @@ namespace SizzlingHotProducts.Api.Services
                     .Where(o => o.Date.Date >= startDateNormalized && o.Date.Date <= endDateNormalized)
                     .ToList();
 
-                return activeCompletedOrders
-                    .SelectMany(order => order.Entries)
-                    .Where(entry => productDict.ContainsKey(entry.Id))
-                    .GroupBy(entry => entry.Id)
-                    .Select(group => new ProductSalesDto
+                return ResolvePolicy()
+                    .Aggregate(
+                        activeCompletedOrders,
+                        productDict,
+                        startDateNormalized,
+                        endDateNormalized,
+                        _aggregationOptions.AccumulateSameCustomer)
+                    .Select(x => new ProductSalesDto
                     {
-                        ProductId = group.Key,
-                        ProductName = productDict[group.Key].Name,
-                        QuantitySold = group.Sum(x => x.Quantity),
-                        ImageUrl = GetImageUrlForProduct(productDict[group.Key])
+                        ProductId = x.ProductId,
+                        ProductName = x.ProductName,
+                        QuantitySold = x.QuantitySold,
+                        ImageUrl = GetImageUrlForProduct(productDict[x.ProductId])
                     })
-                    .OrderByDescending(x => x.QuantitySold)
-                    .ThenBy(x => x.ProductName)
                     .ToList();
             }
             catch (Exception ex)
