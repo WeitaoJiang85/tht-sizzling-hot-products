@@ -11,6 +11,7 @@ on:
         type: string
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   REGISTRY: ${{ secrets.ACR_NAME }}.azurecr.io
   BACKEND_IMAGE_NAME: sizzling-hot-products-api
   FRONTEND_IMAGE_NAME: sizzling-hot-products-web
@@ -24,7 +25,7 @@ jobs:
     steps:
       - name: Checkout
         if: ${{ github.event.inputs.image_tag == '' || github.event_name == 'push' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Login to Azure
         uses: azure/login@v2
